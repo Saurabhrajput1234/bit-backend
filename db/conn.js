@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 mongoose.set('strictQuery', false);
-// const DB = "mongodb+srv://saurabhrajput30072002:hQ3D5bHX8YZ8TUFL@studentdata.kv8ukp1.mongodb.net/sherlock?retryWrites=true&w=majority"
+
 const DB = "mongodb+srv://saurabhrajput30072002:VRwbBMSIuP5dkngg@bitbot.yjqv9vv.mongodb.net/bitbot-Data?retryWrites=true&w=majority&appName=bitbot"
 
 mongoose.connect(DB,{useUnifiedTopology:true,

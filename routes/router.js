@@ -129,4 +129,162 @@ router.get("/validuser", authenticate, async (req, res) => {
 
 
 
+//routes for storing filepair data
+router.post(
+  "/filedata",
+  authenticate,
+  upload.fields([{ name: "file" }, { name: "resultdata" }]),
+  async (req, res) => {
+    const { entity, status ,filePairId,sharedFileEmailsData} = req.body;
+    const files = req.files;
+    const userId = req.userId;
+
+    try {
+      if (!files["file"] && !entity && !files["resultdata"]) {
+        return res.status(422).json({ error: "Fill at least one field" });
+      }
+
+      let filePairData = {};
+
+      if (files["file"]) {
+        const cloudinaryFileResponse = await cloudinary.uploader.upload(
+          files["file"][0].path,
+          { resource_type: "raw" }
+        );
+        filePairData.inputFile = cloudinaryFileResponse.secure_url; // Save file URL
+      } else {
+        filePairData.inputFile = null;
+      }
+
+      if (files["resultdata"]) {
+        const cloudinaryResultDataResponse = await cloudinary.uploader.upload(
+          files["resultdata"][0].path,
+          { resource_type: "raw" }
+        );
+        filePairData.resultdata = cloudinaryResultDataResponse.secure_url; // Save resultdata URL
+      } else {
+        filePairData.resultdata = null; 
+      }
+
+     
+      if (filePairId) {
+        filePairData.filePairId = filePairId;
+      } else {
+        console.log ("require");
+      }
+       if (entity) {
+        filePairData.entity = entity;
+      } else {
+        filePairData.entity = null;
+      }
+      if (sharedFileEmailsData) {
+        filePairData.sharedFileEmailsData = sharedFileEmailsData;
+      } else {
+        filePairData.sharedFileEmailsData = null;
+      }
+      if (status) {
+        filePairData.status = status;
+      } else {
+        filePairData.status = null;
+      }
+
+      const user = await FilePairModel.findById(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      
+      const filePair = user.filePairs.create(filePairData);
+
+      user.filePairs.push(filePairData);
+      await user.save();
+      
+      
+
+      res.status(200).json({ message: "File pair saved successfully" ,filePair: filePair });
+    } catch (error) {
+      console.error("Error:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+kd
+router.post(
+  "/update/filepair/:filePairId",
+  upload.fields([{ name: "inputFile" }, { name: "resultdata" },{ name: "sharedFile" }]),
+  async (req, res) => {
+    const filePairId = req.params.filePairId; 
+    const { entity, status,sharedFileEmail } = req.body;
+    const files = req.files;
+    
+    try {
+      if (!filePairId) {
+        return res.status(422).json({ error: "File Pair ID is required" });
+      }
+
+      const user = await FilePairModel.findOne({ "filePairs.filePairId": filePairId });
+      if (!user) {
+        return res.status(404).json({ error: "File pair not found" });
+      }
+
+      // Find the file pair within the user's filePairs array
+      const filePair = user.filePairs.find(pair => pair.filePairId === filePairId);
+      if (!filePair) {
+        return res.status(404).json({ error: "File pair not found" });
+      }
+
+      // Update entity and status if provided
+      if (entity) {
+        filePair.entity = entity;
+      }
+      if (status) {
+        filePair.status = status;
+      }
+
+      if (sharedFileEmail) {
+        filePair.sharedFileEmailsData.push(sharedFileEmail); 
+      }
+      
+      // Handle file uploads if provided
+      if (files["inputFile"]) {
+        const cloudinaryResponse = await cloudinary.uploader.upload(
+          files["inputFile"][0].path,
+          { resource_type: "raw" }
+        );
+        filePair.inputFile = cloudinaryResponse.secure_url;
+      }
+
+      if (files["sharedFile"]) {
+        const cloudinaryResponse = await cloudinary.uploader.upload(
+          files["sharedFile"][0].path,
+          { resource_type: "raw" }
+        );
+        filePair.sharedFile = cloudinaryResponse.secure_url;
+      }
+      if (files["resultdata"]) {
+        const cloudinaryResponse = await cloudinary.uploader.upload(
+          files["resultdata"][0].path,
+          { resource_type: "raw" }
+        );
+        filePair.resultdata = cloudinaryResponse.secure_url;
+      }
+
+  
+      await user.save();
+
+      return res.status(200).json({ success: true, updatedData: filePair });
+    } catch (error) {
+      console.error("Error:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+
+
+
+
+
+
 module.exports = router;
