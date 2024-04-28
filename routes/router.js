@@ -6,7 +6,7 @@ const cloudinary = require("cloudinary").v2;
 const bcrypt = require("bcryptjs");
 const upload = require("../middleware/upload");
 
-// Configure Cloudinary with your credentials
+// Configure Cloudinary with yo
 cloudinary.config({
   cloud_name: "dcnblai32",
   api_key: "322754248918634",
