@@ -209,7 +209,15 @@ router.post(
   }
 );
 
-kd
+
+
+
+
+// VRwbBMSIuP5dkngg
+// saurabhrajput30072002
+// mongodb+srv://saurabhrajput30072002:VRwbBMSIuP5dkngg@bitbot.yjqv9vv.mongodb.net/?retryWrites=true&w=majority&appName=bitbot
+
+//update filepair data
 router.post(
   "/update/filepair/:filePairId",
   upload.fields([{ name: "inputFile" }, { name: "resultdata" },{ name: "sharedFile" }]),
@@ -283,6 +291,142 @@ router.post(
 
 
 
+
+
+// find user by email
+
+router.get("/finduser/:email", async (req, res) => {
+  const email = req.params.email;
+
+  try {
+    const user = await FilePairModel.findOne({ email: email });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.status(200).json({ user });
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
+
+
+
+
+
+
+// Endpoint for storing files shareFile
+router.post(
+  "/shareFile",
+  upload.fields([{ name: "file" }, { name: "resultdata" }, { name: "sharedFile" }]), 
+  async (req, res) => {
+    const { entity, status, filePairId, email, fileFromId } = req.body; 
+    const files = req.files; // Uploaded files
+
+    try {
+      
+      if (!files["file"] && !entity && !files["resultdata"] && !files["sharedFile"]) {
+        return res.status(422).json({ error: "Fill at least one field" });
+      }
+
+      let filePairData = {}; 
+
+      if (files["file"]) {
+        const cloudinaryFileResponse = await cloudinary.uploader.upload(
+          files["file"][0].path,
+          { resource_type: "raw" }
+        );
+        filePairData.inputFile = cloudinaryFileResponse.secure_url; 
+      } else {
+        filePairData.inputFile = null;
+      }
+      
+      if (files["sharedFile"]) {
+        const cloudinarySharedFileResponse = await cloudinary.uploader.upload(
+          files["sharedFile"][0].path,
+          { resource_type: "raw" }
+        );
+        filePairData.sharedFile = {
+          fileFromId: fileFromId, // Corrected to access from files["sharedFile"]
+          fileName: cloudinarySharedFileResponse.original_filename, // Store the original filename
+          fileUrl: cloudinarySharedFileResponse.secure_url // Store the secure URL
+        }; 
+      } else {
+        filePairData.sharedFile = null;
+      }
+
+      if (files["resultdata"]) {
+        const cloudinaryResultDataResponse = await cloudinary.uploader.upload(
+          files["resultdata"][0].path,
+          { resource_type: "raw" }
+        );
+        filePairData.resultdata = cloudinaryResultDataResponse.secure_url; 
+      } else {
+        filePairData.resultdata = null; 
+      }
+
+      if (filePairId) {
+        filePairData.filePairId = filePairId;
+      } else {
+        console.log("File Pair ID is required");
+      }
+
+      filePairData.entity = entity || null;
+      filePairData.status = status || null;
+
+      const user = await FilePairModel.findOne({ email });
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Create a new file pair using filePairData
+      const filePair = user.filePairs.create(filePairData);
+
+      // Push the new file pair data to the user's filePairs array
+      user.filePairs.push(filePairData);
+      
+      // Save the updated user document
+      await user.save();
+
+      res.status(200).json({ message: "File pair saved successfully", filePair: filePair });
+    } catch (error) {
+      console.error("Error:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+
+
+// Route to delete an object based on user's role permission
+router.delete('/deleteObject/:id', authenticate, async (req, res) => {
+  try {
+    const user = req.user;
+
+    
+    if (user.role === 'police') {
+      
+      const objectId = req.params.id;
+
+      
+      const deletedObject = await FilePairModel.findByIdAndDelete(objectId);
+
+      
+
+      
+      res.status(200).json({ message: 'Object deleted successfully' });
+    } else {
+      
+      res.status(403).json({ error: 'Permission denied. Only police officers can delete objects.' });
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 
 
